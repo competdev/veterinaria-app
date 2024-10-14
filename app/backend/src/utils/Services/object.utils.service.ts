@@ -1,4 +1,4 @@
-import { RolesEnum } from "../../indicator";
+import { RolesEnum } from "../../enums";
 
 export const FixLazyLoadingProps = (target: Object): Object => {
 

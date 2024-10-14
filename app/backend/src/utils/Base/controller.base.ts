@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import { BaseService } from './service.base';
 import { RequestParamsDTO, UpdateResponse } from '../DTO'
-import { RolesEnum } from '../../indicator';
-import { Roles } from '../../auth/Decorator/roles.decorator';
-import { JWTAuthGuard } from '../../auth/Guards/jwt.guard';
-import { RoleGuard } from '../../auth/Guards/roles.guard';
+import { RolesEnum } from '../../enums';
+import { Roles } from '../../decorator';
+import { JwtGuard } from '../../auth/guard';
+import { RoleGuard } from '../../auth/guard';
 
 export abstract class BaseController<EntityRef, DTORef, CreateDTORef, UpdateDTORef> {
 
@@ -24,7 +24,7 @@ export abstract class BaseController<EntityRef, DTORef, CreateDTORef, UpdateDTOR
     public abstract updateById(requestParam: RequestParamsDTO, entityToUpdate: UpdateDTORef, req): Promise<UpdateResponse>
 
     @ApiBearerAuth()
-    @UseGuards(JWTAuthGuard, RoleGuard)
+    @UseGuards(JwtGuard, RoleGuard)
     @Roles(RolesEnum.ADMIN_ROLE)
     @Get()
     public async getAll(): Promise<DTORef[]> {
@@ -37,7 +37,7 @@ export abstract class BaseController<EntityRef, DTORef, CreateDTORef, UpdateDTOR
     }
 
     @ApiBearerAuth()
-    @UseGuards(JWTAuthGuard, RoleGuard)
+    @UseGuards(JwtGuard, RoleGuard)
     @Roles(RolesEnum.ADMIN_ROLE, RolesEnum.PROFESSOR_ROLE, RolesEnum.STUDENT_ROLE)
     @Get(':id')
     public async getById(@Param() requestParam: RequestParamsDTO, @Request() req): Promise<DTORef> {
@@ -52,7 +52,7 @@ export abstract class BaseController<EntityRef, DTORef, CreateDTORef, UpdateDTOR
 
 
     @ApiBearerAuth()
-    @UseGuards(JWTAuthGuard, RoleGuard)
+    @UseGuards(JwtGuard, RoleGuard)
     @Roles(RolesEnum.ADMIN_ROLE, RolesEnum.PROFESSOR_ROLE, RolesEnum.STUDENT_ROLE)
     @Put('deactivate/:id')
     public async deactiveteById(@Param() requestParam: RequestParamsDTO, @Request() req): Promise<UpdateResponse> { 
@@ -65,7 +65,7 @@ export abstract class BaseController<EntityRef, DTORef, CreateDTORef, UpdateDTOR
     }
 
     @ApiBearerAuth()
-    @UseGuards(JWTAuthGuard, RoleGuard)
+    @UseGuards(JwtGuard, RoleGuard)
     @Roles(RolesEnum.ADMIN_ROLE, RolesEnum.PROFESSOR_ROLE, RolesEnum.STUDENT_ROLE)
     @Put('activate/:id')
     public async activateById(@Param() requestParam: RequestParamsDTO, @Request() req): Promise<UpdateResponse> {

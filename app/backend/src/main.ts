@@ -1,37 +1,46 @@
-import { HttpStatus, ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule, SwaggerCustomOptions } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { config } from 'dotenv';
+import "dotenv/config";
+import { expand } from "dotenv-expand";
+expand({ parsed: process.env });
 
-config();
+import { NestFactory, Reflector } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import { ClassSerializerInterceptor, INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
+import { SwaggerModule } from "@nestjs/swagger";
+import { EndpointLoggerInterceptor, GenericExceptionFilter, HttpExceptionFilter } from "./filter";
+import { env, swaggerConfig } from "./configs";
+
+function customBootstrapConfig(app: INestApplication): void {
+	app.enableVersioning({ type: VersioningType.URI });
+
+	app.useGlobalPipes(
+		new ValidationPipe({
+			whitelist: true, // remove unknown properties
+			forbidUnknownValues: true, // joga um erro se tiver um valor desconhecido
+			transform: true, // transforma os valores recebidos
+			transformOptions: {
+				enableImplicitConversion: true, // transforma os valores recebidos para o tipo esperado
+			},
+		}),
+	);
+
+	app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+	app.useGlobalInterceptors(new EndpointLoggerInterceptor()); // intercepta as requisições
+	app.useGlobalFilters(new GenericExceptionFilter(), new HttpExceptionFilter()); // intercepta os erros
+}
+
+function setupSwagger(app: INestApplication) {
+	if (!env.ENABLE_SWAGGER) return;
+
+	const document = SwaggerModule.createDocument(app, swaggerConfig);
+	SwaggerModule.setup("api", app, document);
+}
 
 async function bootstrap() {
+	const app = await NestFactory.create(AppModule);
+	customBootstrapConfig(app);
+	setupSwagger(app);
 
-  const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
-  app.enableCors();
-  app.useGlobalPipes(new ValidationPipe({
-    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY, 
-    transform: true,
-    forbidUnknownValues: true,
-    whitelist: true,
-  }));
-  const swaggerConfig = new DocumentBuilder()
-  .setTitle('Backend - Cells Count app')
-  .setDescription('API feita por Thiago Danilo para fornercer suporte ao aplicativop Cell-ia como proposta de TCC dio curso de Engenharia da Computaçao do Centro Federal de Educação Tecnológica de Minas Gerais - CEFET-MG')
-  .addBearerAuth()
-  .build();
-
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  const swaggerCustomOptions: SwaggerCustomOptions = {
-    swaggerOptions: {
-      persistAuthorization: true
-    },
-    customSiteTitle: 'cellscountapi',
-    useGlobalPrefix: true
-  }
-  SwaggerModule.setup('swagger', app, swaggerDocument, swaggerCustomOptions);
-  await app.listen(Number(process.env.API_PORT));
+	await app.listen(env.API_PORT);
 }
+
 bootstrap();

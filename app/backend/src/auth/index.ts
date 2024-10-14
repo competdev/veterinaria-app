@@ -1,3 +1,1 @@
-export * from './Module';
-export * from './Guards';
-export * from './Decorator';
+export * from "./jwt.strategy"; //Baron Export Pattern
