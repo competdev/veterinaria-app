@@ -1,0 +1,1 @@
+export * from "./jwt.strategy"; //Baron Export Pattern

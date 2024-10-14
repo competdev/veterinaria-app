@@ -1,0 +1,27 @@
+version: "3.8"
+services:
+  dev-db:
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_USER: admin
+      MARIADB_PASSWORD: 3cmDWcS21Ep
+      MARIADB_DATABASE: cell_count_db
+      MARIADB_ROOT_PASSWORD: 8£0;9ohR28lp
+    ports:
+      - "6700:3306"
+    networks:
+      - dev-network
+
+  test-db:
+    image: postgres:13
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: nest
+    networks:
+      - dev-network
+networks:
+  dev-network:
