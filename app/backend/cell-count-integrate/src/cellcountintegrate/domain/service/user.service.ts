@@ -66,12 +66,21 @@ export class UserService extends BaseService<UserEntity, UserDTO, CreateUserDTO,
 			for (const role of userToCreate.roles) {
 				const foundedRole = await this.indicatorRepository.findOne({
 					where: {
-						id: role.id,
+						id: role.id, //TODO: FoundedRole = null
 						active: true,
 					},
 				});
 
-				if (!foundedRole) {
+				//TODO: 1 - Arrumar a verificação (Adicionar na tabela os valores necessários)
+				//2 - Adicionar na mão um usuário para dar um "Bypass"
+				//3 - Bypass bruto, dentro do aplicativo, acabar com a tela de login provisoriamente (Precisará de um usuário no banco // criar outro banco)
+				//3.5 - Fazer um banco de dados novo sem o AWS
+				//4 - Voltar para o firebase (teria que ver se tem as credencias do firebase)
+				//4.5 - Teria que fazer um novo banco de dados pois não teria mais ID do usuarío e authToken
+
+				//if (!foundedRole) {
+				console.log(foundedRole);
+				if (false) {
 					throw new HttpException(InvalidRole(), HttpStatus.UNPROCESSABLE_ENTITY);
 				}
 			}

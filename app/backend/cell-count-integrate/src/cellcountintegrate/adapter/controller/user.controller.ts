@@ -48,6 +48,11 @@ export class UserController extends BaseController<UserEntity, UserDTO, CreateUs
 		}
 	}
 
+	// @Get("/newRole")
+	// public async getNewRole(): Promise<RoleDTO> {
+	// 	// TODO: Implement this method
+	// }
+
 	@ApiBearerAuth()
 	@UseGuards(JwtGuard, RoleGuard)
 	@Roles(RolesEnum.ADMIN_ROLE, RolesEnum.PROFESSOR_ROLE, RolesEnum.STUDENT_ROLE)
