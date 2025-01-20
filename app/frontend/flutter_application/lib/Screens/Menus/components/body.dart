@@ -110,6 +110,7 @@ class _BodyState extends State<Body> {
   @override
   void initState() {
     super.initState();
+    // TODO: RETIRAR FIREBASE.
     FirebaseFirestore.instance
         .collection('users')
         .doc(user!.uid)
@@ -295,7 +296,7 @@ class _BodyState extends State<Body> {
 //     final mimeTypeData =
 //     lookupMimeType(image.path, headerBytes: [0xFF, 0xD8])?.split('/');
 //
-//     final request = http.MultipartRequest('POST', Uri.parse('https://api.cellcount.online/api/document/upload'));
+//     final request = http.MultipartRequest('POST', Uri.parse('http://localhost:3000/document/upload'));
 //
 //     var headers = {
 //       'Authorization': 'Bearer $authToken'
@@ -331,7 +332,7 @@ void refreshToken(BuildContext context) async{
     var headers = {
       'Authorization': 'Bearer $authToken'
     };
-    var request = http.Request('GET', Uri.parse('https://api.cellcount.online/api/auth/refresh'));
+    var request = http.Request('GET', Uri.parse('http://cellia:3000/auth/refresh'));
 
     request.headers.addAll(headers);
 

@@ -10,4 +10,8 @@ VALUES
 (2, 'Professor role', 'Professor role', 2, 2),
 (3, 'Student role', 'Student role', 3, 3);
 
-SELECT * FROM cell_count_db.indicator_entity;
+INSERT INTO cell_count_db.user_entity 
+VALUES
+(3, 'Splinter', 'user@admin.com', '', 1)
+
+SELECT * FROM cell_count_db.user_entity;

@@ -182,7 +182,7 @@ class _BodyState extends State<Body> {
       var headers = {
         'Authorization': 'Bearer $authToken'
       };
-      var request = http.Request('GET', Uri.parse('https://api.cellcount.online/api/document/download/$exameId'));
+      var request = http.Request('GET', Uri.parse('http://cellia:3000/document/download/$exameId'));
 
       request.headers.addAll(headers);
 

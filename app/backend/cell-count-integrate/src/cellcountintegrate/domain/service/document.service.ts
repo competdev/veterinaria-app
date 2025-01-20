@@ -1,187 +1,193 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AWSError, S3 } from 'aws-sdk';
-import { DocumentDTO, CreateDocumentDTO, UpdateDocumentDTO, DocumentDownloadResponseDTO } from '../../adapter/dto';
-import { DocumentEntity } from '../entity';
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Error, S3 } from "-sdk";
+import { DocumentDTO, CreateDocumentDTO, UpdateDocumentDTO, DocumentDownloadResponseDTO } from "../../adapter/dto";
+import { DocumentEntity } from "../entity";
 import {
-    BaseService,
-    CheckAccessPermissionOnObject,
-    EntityEnum,
-    FixLazyLoadingProps,
-    InsuficientPernmissions,
-    NotFoundLabel,
-} from '../../../utils';
-import { DI_ENVIRONMENT } from '../../../configs';
-import { Enviroment } from '../../../configs/enviroment.type';
+	BaseService,
+	CheckAccessPermissionOnObject,
+	EntityEnum,
+	FixLazyLoadingProps,
+	InsuficientPernmissions,
+	NotFoundLabel,
+} from "../../../utils";
+import { DI_ENVIRONMENT } from "../../../configs";
+import { Enviroment } from "../../../configs/enviroment.type";
 
 @Injectable()
 export class DocumentService extends BaseService<DocumentEntity, DocumentDTO, CreateDocumentDTO, UpdateDocumentDTO> {
-    protected override readonly entityName: string = EntityEnum.DOCUMENT;
+	protected override readonly entityName: string = EntityEnum.DOCUMENT;
 
-    constructor(
-        @InjectRepository(DocumentEntity)
-        protected readonly repository: Repository<DocumentEntity>,
+	constructor(
+		@InjectRepository(DocumentEntity)
+		protected readonly repository: Repository<DocumentEntity>,
 
-        @Inject(DI_ENVIRONMENT) private readonly configService: Enviroment
+		@Inject(DI_ENVIRONMENT) private readonly configService: Enviroment,
+	) {
+		super(repository);
+	}
 
-    ) {
-        super(repository);
-    }
+	private getStorage(): S3 {
+		return new S3({
+			accessKeyId: this.configService._ACCESS_KEY,
+			secretAccessKey: this.configService._SECRET_ACCESS_KEY,
+		});
+	}
 
-    private getStorage(): S3 {
-        return new S3({
-            accessKeyId: this.configService.AWS_ACCESS_KEY,
-            secretAccessKey: this.configService.AWS_SECRET_ACCESS_KEY,
-        })
-    }
+	public async uploadFile(file: Express.Multer.File, req: any): Promise<DocumentDTO> {
+		try {
+			const fileSeparetedByDots = file.originalname.split(".");
+			const fileType = fileSeparetedByDots[fileSeparetedByDots.length - 1];
+			const rawFileName = file.originalname.replace(`.${fileType}`, "");
+			const fileHash = `cellCouter_usr_${req.user.id}_${new Date().getTime()}.${fileType}`;
 
-    public async uploadFile(file: Express.Multer.File, req: any): Promise<DocumentDTO> {
-        try {
-            const fileSeparetedByDots = file.originalname.split('.');
-            const fileType = fileSeparetedByDots[fileSeparetedByDots.length - 1];
-            const rawFileName = file.originalname.replace(`.${fileType}`, '');
-            const fileHash = `cellCouter_usr_${req.user.id}_${new Date().getTime()}.${fileType}`;
+			const storage = this.getStorage();
 
-            const storage = this.getStorage();
+			await new Promise<S3.Types.ManagedUpload.SendData>((resolve, reject) => {
+				return storage.upload(
+					{
+						Bucket: this.configService._S3_BUCKET,
+						Key: fileHash,
+						Body: file.buffer,
+					},
+					(err: Error, data: S3.Types.ManagedUpload.SendData) => {
+						if (err) {
+							reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
+						}
 
-            await new Promise<S3.Types.ManagedUpload.SendData>((resolve, reject) => {
-                return storage.upload({
-                    Bucket: this.configService.AWS_S3_BUCKET,
-                    Key: fileHash,
-                    Body: file.buffer
-                }, (err: Error, data: S3.Types.ManagedUpload.SendData) => {
-                    if (err) {
-                        reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
-                    }
+						resolve(data);
+					},
+				);
+			});
 
-                    resolve(data);
-                });
-            });
+			const documentToCreate: CreateDocumentDTO = {
+				fileName: rawFileName,
+				fileHash: fileHash,
+				fileType: fileType,
+			};
 
+			const response = await this.createDocument(documentToCreate, req);
+			return response;
+		} catch (err) {
+			throw err;
+		}
+	}
 
-            const documentToCreate: CreateDocumentDTO = {
-                fileName: rawFileName,
-                fileHash: fileHash,
-                fileType: fileType
-            }
+	public async uploadResponseFile(fileArrayBuffer: Buffer, req: any): Promise<DocumentDTO> {
+		try {
+			const fileType = "jpg";
+			const fileName = `cellCouter_usr_${req.user.id}_${new Date().getTime()}`;
+			const fileHash = `${fileName}.${fileType}`;
 
-            const response = await this.createDocument(documentToCreate, req);
-            return response
+			const storage = this.getStorage();
 
-        } catch (err) {
-            throw err
-        }
-    }
+			await new Promise<S3.Types.ManagedUpload.SendData>((resolve, reject) => {
+				return storage.upload(
+					{
+						Bucket: this.configService._S3_BUCKET,
+						Key: fileHash,
+						Body: fileArrayBuffer,
+					},
+					(err: Error, data: S3.Types.ManagedUpload.SendData) => {
+						if (err) {
+							reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
+						}
 
-    public async uploadResponseFile(fileArrayBuffer: Buffer, req: any): Promise<DocumentDTO> {
-        try {
-            const fileType = 'jpg';
-            const fileName = `cellCouter_usr_${req.user.id}_${new Date().getTime()}`
-            const fileHash = `${fileName}.${fileType}`;
+						resolve(data);
+					},
+				);
+			});
 
-            const storage = this.getStorage();
+			const documentToCreate: CreateDocumentDTO = {
+				fileName: fileName,
+				fileHash: fileHash,
+				fileType: fileType,
+			};
 
-            await new Promise<S3.Types.ManagedUpload.SendData>((resolve, reject) => {
-                return storage.upload({
-                    Bucket: this.configService.AWS_S3_BUCKET,
-                    Key: fileHash,
-                    Body: fileArrayBuffer
-                }, (err: Error, data: S3.Types.ManagedUpload.SendData) => {
-                    if (err) {
-                        reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
-                    }
+			const response = await this.createDocument(documentToCreate, req);
+			return response;
+		} catch (err) {
+			throw err;
+		}
+	}
 
-                    resolve(data);
-                });
-            });
+	public async downloadFile(
+		documentId: number,
+		req: any,
+		ignoreObjectOwner: boolean = false,
+	): Promise<DocumentDownloadResponseDTO> {
+		try {
+			const foundedDocument = await this.getById(documentId, req, ignoreObjectOwner);
 
-            const documentToCreate: CreateDocumentDTO = {
-                fileName: fileName,
-                fileHash: fileHash,
-                fileType: fileType
-            }
+			const storage = this.getStorage();
 
-            const response = await this.createDocument(documentToCreate, req);
-            return response
+			const downloadResponse = await new Promise<S3.Types.GetObjectOutput>((resolve, reject) => {
+				return storage.getObject(
+					{
+						Bucket: this.configService._S3_BUCKET,
+						Key: foundedDocument.fileHash,
+					},
+					(err: Error, data: S3.Types.GetObjectOutput) => {
+						if (err) {
+							reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
+						}
 
-        } catch (err) {
-            throw err
-        }
-    }
+						resolve(data);
+					},
+				);
+			});
 
-    public async downloadFile(documentId: number, req: any, ignoreObjectOwner: boolean = false): Promise<DocumentDownloadResponseDTO> {
-        try {
-            const foundedDocument = await this.getById(documentId, req, ignoreObjectOwner);
+			const buffer = Buffer.from(downloadResponse.Body as Buffer);
+			const base64File = buffer.toString("base64");
 
-            const storage = this.getStorage();
+			const response: DocumentDownloadResponseDTO = {
+				fileName: foundedDocument.fileName,
+				fileType: foundedDocument.fileType,
+				base64File: base64File,
+			};
 
-            const downloadResponse = await new Promise<S3.Types.GetObjectOutput>((resolve, reject) => {
-                return storage.getObject({
-                    Bucket: this.configService.AWS_S3_BUCKET,
-                    Key: foundedDocument.fileHash
-                }, (err: AWSError, data: S3.Types.GetObjectOutput) => {
-                    if (err) {
-                        reject(new HttpException(err.message, HttpStatus.BAD_REQUEST));
-                    }
+			return response;
+		} catch (err) {
+			throw err;
+		}
+	}
 
-                    resolve(data);
-                })
-            })
+	public override async getById(id: number, req: any, ignoreObjectOwner: boolean = false): Promise<DocumentDTO> {
+		try {
+			const foundedDocument = await this.repository.findOne({
+				where: {
+					id,
+				},
+			});
 
-            const buffer = Buffer.from(downloadResponse.Body as Buffer);
-            const base64File = buffer.toString('base64');
+			if (!foundedDocument) {
+				throw new HttpException(NotFoundLabel(this.entityName, this.isEntityMaleGender), HttpStatus.NOT_FOUND);
+			}
 
-            const response: DocumentDownloadResponseDTO = {
-                fileName: foundedDocument.fileName,
-                fileType: foundedDocument.fileType,
-                base64File: base64File
-            }
+			const documentUser = await foundedDocument.user;
 
-            return response
-        } catch (err) {
-            throw err
-        }
-    }
+			if (!ignoreObjectOwner && !CheckAccessPermissionOnObject(documentUser.id, req)) {
+				throw new HttpException(InsuficientPernmissions(), HttpStatus.FORBIDDEN);
+			}
 
-    public override async getById(id: number, req: any, ignoreObjectOwner: boolean = false): Promise<DocumentDTO> {
+			FixLazyLoadingProps(foundedDocument);
 
-        try {
+			return foundedDocument;
+		} catch (err) {
+			throw err;
+		}
+	}
 
-            const foundedDocument = await this.repository.findOne({
-                where: {
-                    id
-                }
-            });
-
-            if (!foundedDocument) {
-                throw new HttpException(NotFoundLabel(this.entityName, this.isEntityMaleGender), HttpStatus.NOT_FOUND)
-            }
-
-            const documentUser = await foundedDocument.user;
-
-            if (!ignoreObjectOwner && !CheckAccessPermissionOnObject(documentUser.id, req)) {
-                throw new HttpException(InsuficientPernmissions(), HttpStatus.FORBIDDEN)
-            }
-
-            FixLazyLoadingProps(foundedDocument);
-
-            return foundedDocument
-
-        } catch (err) {
-            throw err
-        }
-    }
-
-    private async createDocument(documentToCreate: CreateDocumentDTO, req: any): Promise<DocumentDTO> {
-        try {
-            const newDocument = this.repository.create(documentToCreate);
-            newDocument.user = Promise.resolve(req.user);
-            await this.repository.save(newDocument);
-            FixLazyLoadingProps(newDocument);
-            return newDocument
-        } catch (err) {
-            throw err
-        }
-    }
+	private async createDocument(documentToCreate: CreateDocumentDTO, req: any): Promise<DocumentDTO> {
+		try {
+			const newDocument = this.repository.create(documentToCreate);
+			newDocument.user = Promise.resolve(req.user);
+			await this.repository.save(newDocument);
+			FixLazyLoadingProps(newDocument);
+			return newDocument;
+		} catch (err) {
+			throw err;
+		}
+	}
 }

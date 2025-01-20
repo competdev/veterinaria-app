@@ -16,6 +16,9 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
+import 'dart:developer';
+
+
 var logger = Logger();
 
 
@@ -114,11 +117,28 @@ class _BodyState extends State<Body> {
     );
   }
 
+  // void loginUserNoApi(String email, String password) async {
+  //   User? user = await loginUsingEmailPassword(
+  //       email: email,
+  //       password: password,
+  //       context: context);
+  //   if (user != null) {
+  //     Navigator.of(context).pushReplacement(MaterialPageRoute(
+  //       builder: (context) => const MenusScreen(),
+  //     ));
+  //   } else {
+  //     Fluttertoast.showToast(msg: "Conta desativada, Use Uma nova conta");
+  //   }
+  // }
+
   void loginUserApi(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
+    log("Iniciando loginUserApi com email: $email");
+    log("Iniciando loginUserApi com passowrd: $password");
+
 
     try{
-      var loginResponse = await http.post( Uri.parse('https://api.cellcount.online/api/auth/login'),
+      var loginResponse = await http.post( Uri.parse('http://10.0.2.2:3000/auth/login'),
           headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           },
@@ -127,13 +147,17 @@ class _BodyState extends State<Body> {
             "password": password
           })
       );
-
+      print(loginResponse.body);
+      print(loginResponse.statusCode);
+      //log('Error occurred', level: 1000, error: 'NullPointerException');
       if (loginResponse.statusCode == 200 || loginResponse.statusCode == 201){
-
+        print(jsonDecode(loginResponse.body));
         var decodeAuthToken = LoginResponseModel.fromJson(jsonDecode(loginResponse.body));
-        var authToken = decodeAuthToken.data?.authToken ?? "";
-
+        //TODO: NÃO TÁ PASSANDO O AUTH TOKEN PELO jsonDecode, HARDCODEI FEIO, ARRUMAR. "new Data.fromJson(json['data'])"
+        var authToken = decodeAuthToken.data?.authToken ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ2ZXRAZ21haWwuY29tIiwiZXhwIjoxNzM3MzUyNjE2fQ.6j22GE-hT9ghJy9-SPca_Gynfxt4r0Gz1rmPyheAO20";
+        print("authToken: $authToken");
         if(authToken.isNotEmpty) {
+          print("gremio");
           try {
             await prefs.setString('authToken', authToken);
           }catch (err){
@@ -142,15 +166,23 @@ class _BodyState extends State<Body> {
             return;
           }
         } else {
+          print("inter");
           Fluttertoast.showToast(msg: "Falha na autenticaçao, tente novamente");
           return;
         }
           //Fluttertoast.showToast(msg: "Logado na API");
-          User? user = await loginUsingEmailPassword(
-              email: email,
-              password: password,
-              context: context);
-          if (user != null) {
+          //User? user = await loginUsingEmailPassword(
+          //    email: email,
+          //    password: password,
+          //    context: context);
+          //user != null TODO: BYPASS, ARRUMAR.
+        User user = User(
+          id: 1,
+          name: "fred",
+          email: "fred@gmail.com",
+          active: true,
+        );
+        if (true) {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
               builder: (context) => const MenusScreen(),
             ));
@@ -161,7 +193,8 @@ class _BodyState extends State<Body> {
         Fluttertoast.showToast(msg: "Erro Inesperado, tente novamente");
       }
       } catch (err){
-        //Fluttertoast.showToast(msg: "Erro Inesperado");
+        log("éfi: $err");
+        Fluttertoast.showToast(msg: "Erro Inesperado");
     }
   }
 }

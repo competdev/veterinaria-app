@@ -253,7 +253,7 @@ class _BodyState extends State<Body> {
           return;
         }
 
-        var registerResponse = await http.post( Uri.parse('https://api.cellcount.online/api/user'),
+        var registerResponse = await http.post( Uri.parse('http://cellia:3000/user'),
             headers: <String, String>{
               'Content-Type': 'application/json; charset=UTF-8',
             },
@@ -275,7 +275,7 @@ class _BodyState extends State<Body> {
         if (registerResponse.statusCode == 201) {
          // Fluttertoast.showToast(msg: "Conta Cadastrada Na API");
 
-          var loginResponse = await http.post( Uri.parse('https://api.cellcount.online/api/auth/login'),
+          var loginResponse = await http.post( Uri.parse('http://cellia:3000/auth/login'),
               headers: <String, String>{
                 'Content-Type': 'application/json; charset=UTF-8',
               },

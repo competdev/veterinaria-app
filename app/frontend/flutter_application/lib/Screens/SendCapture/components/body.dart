@@ -274,19 +274,21 @@ class _BodyState extends State<Body> {
     }
   }
 
+  //TODO: talvez criar uma função sendPhotoToLocalApi
+
   void sendPhotoToApi(File image) async{
       setState(() {
         pr.show();
       });
 
     final prefs = await SharedPreferences.getInstance();
-    var authToken = prefs.getString('authToken');
+    var authToken = prefs.getString('authToken'); // TODO: Aqui seria o Bypass
 
     final mimeTypeData =
     lookupMimeType(image.path, headerBytes: [0xFF, 0xD8])?.split('/');
 
     try {
-      final request = http.MultipartRequest('POST', Uri.parse('https://api.cellcount.online/api/document/upload'));
+      final request = http.MultipartRequest('POST', Uri.parse('http://cellia:3000/document/upload'));
 
       var headers = {
         'Authorization': 'Bearer $authToken'
@@ -483,7 +485,7 @@ class _BodyState extends State<Body> {
         'Authorization': 'Bearer $authToken',
         'Content-Type': 'application/json'
       };
-      var request = http.Request('POST', Uri.parse('https://api.cellcount.online/api/hemogram-exam'));
+      var request = http.Request('POST', Uri.parse('http://cellia:3000/hemogram-exam'));
       request.body = json.encode({
         "title": tituloEditingController.text,
         "description": descricaoEditingController.text,
